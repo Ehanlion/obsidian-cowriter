@@ -78,6 +78,8 @@ def main():
     else:
         print(f"Validated vault path {VAULT_PATH}, proceeding to load all md files")
 
+    # printDirectory(path=VAULT_PATH, printOnlyMd=True)
+
     # Use a directory loaded to load all markdown files
     loader = DirectoryLoader(
         path=VAULT_PATH,
@@ -93,6 +95,30 @@ def main():
         return
     else:
         print(f"Succesfully loaded {len(documents)} documents")
+
+    # Now split data into chunks before feeding it to our model
+    print(f"Splitting documents into chunks")
+    textSplitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200,
+        length_function=len
+    )
+    chunks = textSplitter.split_documents(documents=documents)
+    print(f"Split {len(documents)} documents into {len(chunks)} chunks")
+
+    # initialize the model and pass it the chunk data
+    print(f"Initializing embedding model: {EMBEDDING_MODEL}")
+    """
+    What the hell is embeddings? 
+
+    Object of the OllamaEmbeddings class.
+    It is a translator and it communicates with local Ollama server and converts test -> numbers
+    The model processes the meaning and returns a data vector [00, 00, ... ,00] 
+    
+    Apparently, some models don't support embedding! 
+    -> qwen3:30b does support it?
+    """
+    embeddings = OllamaEmbeddings(model=EMBEDDING_MODEL)
 
 if __name__ == "__main__":
     main() # run main
