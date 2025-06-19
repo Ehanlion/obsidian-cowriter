@@ -1,4 +1,5 @@
 import os
+import time
 from dotenv import load_dotenv
 from langchain_community.document_loaders import DirectoryLoader, UnstructuredMarkdownLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -6,7 +7,7 @@ from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import Chroma
 
 # Load the .env file here
-load_dotenv()
+load_dotenv(override=True)
 
 # Config vars from the .env files
 VAULT_PATH = os.getenv("OBSIDIAN_VAULT_PATH")               # path to osidian vault
@@ -64,6 +65,9 @@ def printDirectory(path : str, printOnlyMd : bool = False):
 Main method, used to injest the contents of a directory.
 """
 def main():
+    # start a timer
+    startTime = time.time()
+
     # Print loaded environment data from .env
     print("\n=== Environment Data ===")
     print(f"\tVault path: {VAULT_PATH}")
@@ -116,9 +120,29 @@ def main():
     The model processes the meaning and returns a data vector [00, 00, ... ,00] 
     
     Apparently, some models don't support embedding! 
-    -> qwen3:30b does support it?
+    -> qwen3:30b supports this
+    -> llama3:latest supports this
     """
     embeddings = OllamaEmbeddings(model=EMBEDDING_MODEL)
+    print(f"Initialized embedding model: {EMBEDDING_MODEL}")
+
+    # Use embeddings with Chromadb to generate vector store
+    print(f"Creating and persisting vector store at: {CHROMA_PATH}")
+    print("(This is the most time-consuming step, as it generates embeddings for all document chunks...)")
+    Chroma.from_documents(
+        documents=chunks,
+        embedding=embeddings,
+        persist_directory=CHROMA_PATH
+    )
+
+    endTime = time.time()
+    runDuration = endTime - startTime
+    minutes, seconds = divmod(runDuration, 60)
+
+    print(f"Ingestion completed")
+    print(f"Vector store generated at '{CHROMA_PATH}'. You can now query your vault.")
+    print(f"Total time taken: {int(minutes)} minutes and {seconds:.2f} seconds.")
+
 
 if __name__ == "__main__":
     main() # run main

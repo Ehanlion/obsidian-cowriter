@@ -3,7 +3,7 @@ import numpy as np
 
 # --- CONFIGURATION ---
 # Make sure this model is running in your Ollama instance
-EMBEDDING_MODEL = "qwen3:30b" 
+EMBEDDING_MODEL = "llama3:latest" 
 
 def main():
     """
