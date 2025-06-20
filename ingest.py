@@ -1,10 +1,13 @@
 import os
 import time
+import logging
+import shutil
 from dotenv import load_dotenv
 from langchain_community.document_loaders import DirectoryLoader, UnstructuredMarkdownLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import Chroma
+from tqdm import tqdm
 
 # Load the .env file here
 load_dotenv(override=True)
@@ -35,7 +38,6 @@ def printDirectory(path : str, printOnlyMd : bool = False):
     print(f"\n--- Printing Directory ---")
     print(f"\tSearching directory: {path}")
     print(f"Mode: {'Only *.md Files' if printOnlyMd else 'All Files'}")
-
 
     totalFiles = 0
     mdFiles = 0
@@ -82,7 +84,7 @@ def main():
     else:
         print(f"Validated vault path {VAULT_PATH}, proceeding to load all md files")
 
-    # printDirectory(path=VAULT_PATH, printOnlyMd=True)
+    printDirectory(path=VAULT_PATH, printOnlyMd=True)
 
     # Use a directory loaded to load all markdown files
     loader = DirectoryLoader(
@@ -111,9 +113,8 @@ def main():
     print(f"Split {len(documents)} documents into {len(chunks)} chunks")
 
     # initialize the model and pass it the chunk data
-    print(f"Initializing embedding model: {EMBEDDING_MODEL}")
-    """
-    What the hell is embeddings? 
+    '''
+    Notes on the Embeddings:
 
     Object of the OllamaEmbeddings class.
     It is a translator and it communicates with local Ollama server and converts test -> numbers
@@ -121,28 +122,28 @@ def main():
     
     Apparently, some models don't support embedding! 
     -> qwen3:30b supports this
-    -> llama3:latest supports this
-    """
+    -> magistral:latest -> chromadb.errors.InvalidArgumentError: Collection expecting embedding with dimension of 2048, got 5120
+    '''
+    print(f"Initializing embedding model: {EMBEDDING_MODEL}")
     embeddings = OllamaEmbeddings(model=EMBEDDING_MODEL)
     print(f"Initialized embedding model: {EMBEDDING_MODEL}")
 
     # Use embeddings with Chromadb to generate vector store
     print(f"Creating and persisting vector store at: {CHROMA_PATH}")
-    print("(This is the most time-consuming step, as it generates embeddings for all document chunks...)")
     Chroma.from_documents(
         documents=chunks,
         embedding=embeddings,
         persist_directory=CHROMA_PATH
     )
 
+    # Track the end time here
     endTime = time.time()
     runDuration = endTime - startTime
     minutes, seconds = divmod(runDuration, 60)
 
     print(f"Ingestion completed")
     print(f"Vector store generated at '{CHROMA_PATH}'. You can now query your vault.")
-    print(f"Total time taken: {int(minutes)} minutes and {seconds:.2f} seconds.")
-
+    print(f"Injested documents: {len(documents)}, chunks: {len(chunks)} in time {int(minutes)}:{seconds:.2f}")
 
 if __name__ == "__main__":
     main() # run main
